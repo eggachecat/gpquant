@@ -1,0 +1,4 @@
+*/__pycache__/
+.idea/
+project/data/
+project/outputs/
