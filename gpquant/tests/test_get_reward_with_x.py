@@ -9,8 +9,9 @@ from gpquant import gp_plot
 import pydotplus
 
 import pandas as pd
-import data_processing
-import pylab as plt
+import numpy as np
+
+CONFIG_N_DIM = 3
 
 
 def read_data(file_path, header=None):
@@ -18,12 +19,9 @@ def read_data(file_path, header=None):
     x_data = x_data.as_matrix()
     return x_data
 
-### something wrong with this dll
-CONFIG_DLL_PATH = "libs/Power_API.dll"
-CONFIG_REWARD_FUNC_KEY = "?AdvanceGP@@YAPEANPEAHHPEAN@Z"
 
-# CONFIG_DLL_PATH = "D:/sunao/workspace/cpp/GPQuant/x64/Release/GPQuant.dll"
-# CONFIG_REWARD_FUNC_KEY = "?get_ten@BackTesting@GPQuant@@SAPEANXZ"
+CONFIG_DLL_PATH = "D:/sunao/workspace/cpp/GPQuant/x64/Release/GPQuant.dll"
+CONFIG_REWARD_FUNC_KEY = "?get_reward_with_x@BackTesting@GPQuant@@SANPEAHPEANHPEAPEANH@Z"
 
 file_path = "test.txt"
 
@@ -32,7 +30,25 @@ mid = Middleware(CONFIG_DLL_PATH)
 get_reward_func = mid.get_function(CONFIG_REWARD_FUNC_KEY)
 get_reward_func.restype = ctypes.POINTER(ctypes.c_double)
 
-x_data = data_processing.read_data(file_path)
+x_data = read_data(file_path)
+
+
+def convert_list_to_c_array(x_list, n_data, n_dim):
+    x_arr = (ctypes.c_double * n_dim * n_data)()
+
+    for i in range(n_data):
+        print(x_list[i])
+        for j in range(n_dim):
+            print(x_list[i][j])
+            x_arr[i][j] = 0
+
+    return x_arr
+
+
+x_list = [[2, 3, 1], [1, 2, 3]]
+x_arr = convert_list_to_c_array(x_list, 2, 3)
+print(x_arr)
+exit()
 
 
 def explicit_fitness(y, y_pred, sample_weight):
@@ -41,13 +57,10 @@ def explicit_fitness(y, y_pred, sample_weight):
     y = [ctypes.c_int(int(_)) for _ in y]
     indices = (ctypes.c_int * n_data)(*y)
 
-    arr = (ctypes.c_double * n_data)(*y_pred)
-    # print(y)
+    y_pred_arr = (ctypes.c_double * n_data)(*y_pred)
+    x_arr = (ctypes.c_double * n_data * CONFIG_N_DIM)()
 
-    # start = time.time()
-    res = get_reward_func(indices, ctypes.c_int(n_data), arr)
-    # end = time.time()
-    # print(end - start)
+    res = get_reward_func(indices, ctypes.c_int(n_data), y_pred_arr)
 
     return res[0]
 
@@ -64,23 +77,15 @@ est_gp = SymbolicRegressor(population_size=500,
 
 _ = [i for i in range(x_data.shape[0])]
 est_gp.fit(x_data, _)
-import numpy as np
 
-y_truth = np.sin(x_data[:, 0] * x_data[:, 0]) - x_data[:, 1] + 3 * x_data[:, 2]
-
+y_truth = np.sin(x_data[:, 0] * x_data[:, 1]) - x_data[:, 2] * x_data[:, 2] + x_data[:, 2]
 canvas = gp_plot.GPCanvas()
-
 canvas.draw_line_chart_2d(range(0, len(y_truth)), y_truth, color="blue", label="y_truth", line_style="solid")
 
 y_pred = est_gp.predict(x_data)
 canvas.draw_line_chart_2d(range(0, len(y_pred)), y_pred, color="red", label="y_pred")
-
 canvas.set_legend()
 canvas.froze()
 
 graph = pydotplus.graphviz.graph_from_dot_data(est_gp._program.export_graphviz())
 graph.write_png("outputs/gp.png")
-
-regressor(fitness(x))
-regressor.reinforce(x_data)
-
