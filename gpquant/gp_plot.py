@@ -316,6 +316,13 @@ class GPCanvas:
     def get_color(self, i):
         return self.__shuffle_colors[i]
 
+    def set_axis_invisible(self, sub_canvas_id=1, direction=None):
+        ax = self.add_canvas(sub_canvas_id)
+        if direction is None:
+            direction = ['top', 'right']
+        for d in direction:
+            ax.spines[d].set_visible(False)
+
     def set_legend(self, sub_canvas_id=1):
         ax = self.add_canvas(sub_canvas_id)
         handles, labels = ax.get_legend_handles_labels()
