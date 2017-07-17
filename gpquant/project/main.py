@@ -1,3 +1,6 @@
+import sys
+sys.path.append("D:/sunao/workspace/python/gpquant/")
+
 from gpquant.gp_middleware import Middleware
 import ctypes
 
@@ -9,8 +12,7 @@ from gpquant import gp_plot
 import pydotplus
 
 import pandas as pd
-import data_processing
-import pylab as plt
+
 
 
 def read_data(file_path, header=None):
@@ -19,7 +21,7 @@ def read_data(file_path, header=None):
     return x_data
 
 ### something wrong with this dll
-CONFIG_DLL_PATH = "libs/Power_API.dll"
+CONFIG_DLL_PATH = "./libs/Power_API.dll"
 CONFIG_REWARD_FUNC_KEY = "?AdvanceGP@@YAPEANPEAHHPEAN@Z"
 
 # CONFIG_DLL_PATH = "D:/sunao/workspace/cpp/GPQuant/x64/Release/GPQuant.dll"
@@ -32,7 +34,7 @@ mid = Middleware(CONFIG_DLL_PATH)
 get_reward_func = mid.get_function(CONFIG_REWARD_FUNC_KEY)
 get_reward_func.restype = ctypes.POINTER(ctypes.c_double)
 
-x_data = data_processing.read_data(file_path)
+x_data = read_data(file_path)
 
 
 def explicit_fitness(y, y_pred, sample_weight):
@@ -54,7 +56,7 @@ def explicit_fitness(y, y_pred, sample_weight):
 
 function_set = ['add', 'sub', 'mul', 'div', 'sin']
 est_gp = SymbolicRegressor(population_size=500,
-                           generations=20, stopping_criteria=0.01,
+                           generations=1, stopping_criteria=0.01,
                            p_crossover=0.7, p_subtree_mutation=0.1,
                            p_hoist_mutation=0.05, p_point_mutation=0.1,
                            metric=make_fitness(explicit_fitness, False),
@@ -81,6 +83,4 @@ canvas.froze()
 graph = pydotplus.graphviz.graph_from_dot_data(est_gp._program.export_graphviz())
 graph.write_png("outputs/gp.png")
 
-regressor(fitness(x))
-regressor.reinforce(x_data)
 
