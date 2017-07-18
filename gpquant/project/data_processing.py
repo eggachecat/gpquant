@@ -17,7 +17,7 @@ def generate_random_data(n_data, dim, file_path, _range=None):
 
 
 def main():
-    generate_random_data(200, 3, "test.txt")
+    generate_random_data(20000, 3, "../tests/_test.txt")
 
 
 if __name__ == "__main__":

@@ -12,13 +12,14 @@ import pandas as pd
 import numpy as np
 
 CONFIG_N_DIM = 3
-CONFIG_FILE_PATH = "_test.txt"
+CONFIG_FILE_PATH = "./data/_test.txt"
 
 CONFIG_DLL_PATH = "D:/sunao/workspace/cpp/GPQuant/x64/Release/GPQuant.dll"
 CONFIG_REWARD_FUNC_KEY = "?get_reward_with_x@BackTesting@GPQuant@@SANPEAHPEANH1HH@Z"
 CONFIG_CHEATING_FUNC_KEY = "?cheating@BackTesting@GPQuant@@SAPEANPEANHH@Z"
 CONFIG_DOUBLE_GC_FUNC_KEY = "?delete_double_pointer@BackTesting@GPQuant@@SAXPEAN@Z"
 CONFIG_INT_GC_FUNC_KEY = "?delete_int_pointer@BackTesting@GPQuant@@SAXPEAH@Z"
+CONFIG_TEST_MEM_FUNC_KEY = "?test_mem@BackTesting@GPQuant@@SANPEAHPEANH@Z"
 
 
 def read_data(file_path, header=None):
@@ -37,46 +38,33 @@ get_reward_func.restype = ctypes.c_double
 cheating_func = mid.get_function(CONFIG_CHEATING_FUNC_KEY)
 cheating_func.restype = ctypes.POINTER(ctypes.c_double)
 
-gc_d_func = mid.get_function(CONFIG_DOUBLE_GC_FUNC_KEY)
-gc_d_func.argtypes = [ctypes.POINTER(ctypes.c_double)]
-gc_d_func.restypes = None
+test_mem_func = mid.get_function(CONFIG_TEST_MEM_FUNC_KEY)
 
-gc_i_func = mid.get_function(CONFIG_INT_GC_FUNC_KEY)
-gc_i_func.argtypes = [ctypes.POINTER(ctypes.c_int)]
-gc_i_func.restypes = None
+total_data = 1000000
+y = range(total_data)
+sample_weight = [np.random.randint(0, 2) for _ in range(total_data)]
 
-y = [1, 2, 3, 4, 5]
-sample_weight = [1, 0, 0, 1, 1]
+indices = np.array([int(i) for i in range(total_data) if sample_weight[i]], dtype=int)
+n_data = len(indices)
+indices_pointer = indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 
-_indices = np.array([int(i) for i in range(len(y)) if sample_weight[i]], dtype=int)
-n_data = len(_indices)
-indices_pointer = _indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 
-print(indices_pointer)
-print(ctypes.addressof(indices_pointer))
+class Foo:
+    def __init__(self, func):
+        self.func = func
 
-gc_i_func(indices_pointer)
-print("indices_pointer has been deleted")
-print(ctypes.addressof(indices_pointer))
+    def fit(self):
+        _indices = np.array([i for i in range(len(y)) if sample_weight[i]], dtype=int)
+        _y_pred_arr = np.array([np.random.rand() for i in range(len(y)) if sample_weight[i]], dtype=float)
 
-_indices = np.array([int(i) for i in range(len(y)) if sample_weight[i]], dtype=int)
-n_data = len(_indices)
-indices_pointer = _indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
+        test_mem_func(_indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                  _y_pred_arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int)), len(_indices))
 
-print(indices_pointer)
-print(ctypes.addressof(indices_pointer))
 
-gc_i_func(indices_pointer)
-print("indices_pointer has been deleted")
-print(ctypes.addressof(indices_pointer))
+def f_foo(x, y):
+    x
 
-_indices = np.array([int(i) for i in range(len(y)) if sample_weight[i]], dtype=int)
-n_data = len(_indices)
-indices_pointer = _indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
 
-print(indices_pointer)
-print(ctypes.addressof(indices_pointer))
-
-gc_i_func(indices_pointer)
-print("indices_pointer has been deleted")
-print(ctypes.addressof(indices_pointer))
+foo = Foo(test_mem_func)
+while True:
+    foo.fit()
